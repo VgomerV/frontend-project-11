@@ -5,7 +5,8 @@
   "description": "RSS aggregator",
   "main": "index.js",
   "scripts": {
-    "build": "webpack --config webpack.config.js"
+    "build": "webpack --config webpack.config.js",
+    "serve": "webpack serve --open --mode development"
   },
   "author": "",
   "license": "ISC",
@@ -26,6 +27,9 @@
     "webpack-dev-server": "^5.1.0"
   },
   "dependencies": {
-    "bootstrap": "^5.3.3"
+    "bootstrap": "^5.3.3",
+    "mini-css-extract-plugin": "^2.9.2",
+    "on-change": "^5.0.1",
+    "yup": "^1.4.0"
   }
 }

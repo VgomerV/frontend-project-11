@@ -1,5 +1,5 @@
 import path from 'path';
-import htmlWebpackPlugin from 'html-webpack-plugin';
+import HtmlWebpackPlugin from 'html-webpack-plugin';
 
 export default {
   mode: 'production',
@@ -7,15 +7,15 @@ export default {
     filename: path.resolve(process.cwd(), 'src/js/index.js'),
   },
   output: {
-    path: path.resolve(process.cwd(), 'public'),
+    path: path.resolve(process.cwd(), 'dist'),
     filename: 'index.js',
   },
   devServer: {
-    port: 9000,
+    port: 8080,
     compress: true,
     hot: true,
     static: {
-      directory: path.join(process.cwd(), 'public'),
+      directory: path.join(process.cwd(), 'dist'),
     },
   },
   module: {
@@ -28,7 +28,7 @@ export default {
     ],
   },
   plugins: [
-    new htmlWebpackPlugin({
+    new HtmlWebpackPlugin({
       title: 'RSS aggregator',
       filename: 'index.html',
       template: 'index.html',
