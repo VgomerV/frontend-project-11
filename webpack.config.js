@@ -4,7 +4,7 @@ import HtmlWebpackPlugin from 'html-webpack-plugin';
 export default {
   mode: 'production',
   entry: {
-    filename: path.resolve(process.cwd(), 'src/js/index.js'),
+    filename: path.resolve(process.cwd(), 'src/index.js'),
   },
   output: {
     path: path.resolve(process.cwd(), 'dist'),
