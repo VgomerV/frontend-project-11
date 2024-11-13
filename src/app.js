@@ -4,10 +4,10 @@ import onChange from 'on-change';
 import i18n from 'i18next';
 import resources from './locales/index.js';
 import render from './view.js';
+import { getUrlWithProxy, parserRss } from './utilites.js';
 
 const validator = (urlValue, state, localization) => {
-  const { urlList } = state.addRssForm;
-
+  const { urlList } = state;
   setLocale({
     string: {
       url: localization.t(resources[state.appLng].errors.urlIncorrect),
@@ -16,24 +16,13 @@ const validator = (urlValue, state, localization) => {
       notOneOf: localization.t(resources[state.appLng].errors.urlIsAlredy),
     },
   });
-
   const schema = object({
     url: string().trim().url().notOneOf(urlList),
   });
-
   return schema.validate({ url: urlValue });
 };
 
 export default () => {
-  axios.get('https://lorem-rss.hexlet.app/feed')
-    .then((response) => {
-      console.log(response.data);
-    })
-    .catch((error) => {
-      console.log('ERROR');
-      console.log(error);
-    });
-
   const localization = i18n.createInstance();
   localization.init({
     lng: 'ru',
@@ -45,12 +34,9 @@ export default () => {
     appLng: 'ru',
     addRssForm: {
       isValid: true,
-      errors: {
-        urlIncorrect: '',
-        urlNotRss: '',
-      },
-      urlList: [],
+      error: '',
     },
+    urlList: [],
   };
 
   const watchedState = onChange(state, (path, value, previousValue) => {
@@ -64,24 +50,44 @@ export default () => {
     e.preventDefault();
 
     const formData = new FormData(e.target);
-    const url = formData.get('url');
+    const urlValue = formData.get('url');
 
     btn.setAttribute('disabled', '');
 
-    validator(url, state, localization)
+    validator(urlValue, state, localization)
       .then((result) => {
-        btn.removeAttribute('disabled');
-
-        watchedState.addRssForm.urlList.push(result.url);
-        watchedState.addRssForm.errors.urlIncorrect = '';
+        watchedState.addRssForm.error = '';
         watchedState.addRssForm.isValid = true;
 
-        form.reset();
+        return result.url;
+      })
+      .then((url) => {
+        axios(getUrlWithProxy(url))
+          .then((response) => {
+            const [data, error] = parserRss(response.data.contents);
+
+            btn.removeAttribute('disabled');
+
+            if (error) {
+              watchedState.addRssForm.error = localization.t(resources[state.appLng].errors.urlNotRss);
+              watchedState.addRssForm.isValid = false;
+            } else {
+              watchedState.urlList = [...watchedState.urlList, url];
+              form.reset();
+            }
+          })
+          .catch(() => {
+            btn.removeAttribute('disabled');
+            watchedState.addRssForm.error = localization.t(resources[state.appLng].errors.networkErr);
+            watchedState.addRssForm.isValid = false;
+          });
       })
       .catch((err) => {
+        console.log(err.errors);
+        console.log(watchedState.addRssForm.error);
         btn.removeAttribute('disabled');
 
-        watchedState.addRssForm.errors.urlIncorrect = err.errors;
+        watchedState.addRssForm.error = err.errors;
         watchedState.addRssForm.isValid = false;
       });
   });

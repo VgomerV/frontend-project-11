@@ -12,9 +12,7 @@ const renderError = (isValid, error) => {
 };
 
 export default (state, path, value, previousValue) => {
-  if (path === 'addRssForm.isValid') {
-    const error = state.addRssForm.errors.urlIncorrect;
-    const { isValid } = state.addRssForm;
-    renderError(isValid, error);
-  }
+  const { error } = state.addRssForm;
+  const { isValid } = state.addRssForm;
+  renderError(isValid, error);
 };
