@@ -8,3 +8,6 @@ publish:
 
 lint:
 	npx eslint .
+
+server:
+	npm run serve
