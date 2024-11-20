@@ -8,7 +8,7 @@ const renderError = (state) => {
   formInput.focus();
 };
 
-const renderApp = (state) => {
+const renderApp = (state, i18n) => {
   const feedbackContainer = document.querySelector('.feedback');
   const formInput = document.getElementById('url-input');
   feedbackContainer.classList.remove('text-danger');
@@ -20,7 +20,7 @@ const renderApp = (state) => {
   const postContainer = document.querySelector('.posts');
   postContainer.innerHTML = `<div class='card border-0'>
   <div class='card-body'>
-  <h2 class='card-title h4'>Посты</h2>
+  <h2 class='card-title h4'>${i18n.t('posts')}</h2>
   </div>
   </div>`;
   const postsCard = document.querySelector('.posts .card');
@@ -31,7 +31,7 @@ const renderApp = (state) => {
   const feedsContainer = document.querySelector('.feeds');
   feedsContainer.innerHTML = `<div class='card border-0'>
   <div class='card-body'>
-  <h2 class='card-title h4'>Фиды</h2>
+  <h2 class='card-title h4'>${i18n.t('feeds')}</h2>
   </div>
   </div>`;
   const feedsCard = document.querySelector('.feeds .card');
@@ -51,7 +51,7 @@ const renderApp = (state) => {
     const postItem = document.createElement('li');
     postItem.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
     postItem.innerHTML = `<a href='${post.url}' class='fw-bold' data-id='${post.postId}' target='_blank' data-id='noopener noreferrer'>${post.title}</a>
-    <button type='button' class='btn btn-outline-primary btn-sm' data-id='${post.postId}' data-bs-toggle='#modal'>Просмотр</button>`;
+    <button type='button' class='btn btn-outline-primary btn-sm' data-id='${post.postId}' data-bs-toggle='#modal'>${i18n.t('viewPost')}</button>`;
     postsList.append(postItem);
   });
 };
@@ -94,19 +94,19 @@ const modalClose = () => {
   modal.removeAttribute('role');
 };
 
-export default (state) => {
+export default (state, i18n) => {
   const { processState } = state;
   console.log(processState);
 
   switch (processState) {
     case 'completed':
-      renderApp(state);
+      renderApp(state, i18n);
       break;
     case 'error':
       renderError(state);
       break;
     case 'modalOpen':
-      modalOpen(state);
+      modalOpen(state, i18n);
       break;
     case 'modalClose':
       modalClose();

@@ -8,17 +8,21 @@ import render from './view.js';
 import { getUrlWithProxy, parserRss } from './utilites.js';
 
 const validator = (urlValue, state, i18n) => {
-  const { urlAddList } = state;
+  const urlList = state.feeds.reduce((acc, feed) => {
+    const { feedUrl } = feed;
+    return [...acc, feedUrl];
+  }, []);
+
   setLocale({
     string: {
-      url: i18n.t(resources[state.appLng].errors.urlIncorrect),
+      url: i18n.t('errors.urlIncorrect'),
     },
     mixed: {
-      notOneOf: i18n.t(resources[state.appLng].errors.urlIsAlredy),
+      notOneOf: i18n.t('errors.urlIsAlredy'),
     },
   });
   const schema = object({
-    url: string().trim().url().notOneOf(urlAddList),
+    url: string().trim().url().notOneOf(urlList),
   });
   return schema.validate({ url: urlValue });
 };
@@ -37,17 +41,14 @@ export default () => {
     addRssForm: {
       message: '',
     },
-    urlAddList: [],
     feeds: [],
     posts: [],
     postBtnActive: '',
   };
 
-  console.log(i18n.t(resources[state.appLng]));
-
   const watchedState = onChange(state, () => {
     if (state.processState !== 'processing') {
-      render(state);
+      render(state, i18n);
     }
   });
 
@@ -77,19 +78,18 @@ export default () => {
 
             const [data, error] = parserRss(response.data.contents);
             if (error) {
-              state.addRssForm.message = i18n.t(resources[state.appLng].errors.urlNotRss);
+              state.addRssForm.message = i18n.t('errors.urlNotRss');
               watchedState.processState = 'error';
             } else {
-              watchedState.addRssForm.message = i18n.t(resources[state.appLng].rssAdded);
-              watchedState.urlAddList = [...watchedState.urlAddList, url];
-
-              const title = data.querySelector('title');
-              const description = data.querySelector('description');
+              watchedState.addRssForm.message = i18n.t('rssAdded');
 
               const feed = {
-                feedTitle: title.textContent,
-                feedDescription: description.textContent,
+                feedUrl: url,
+                feedPubDate: new Date(data.querySelector('pubDate').textContent),
+                feedTitle: data.querySelector('title').textContent,
+                feedDescription: data.querySelector('description').textContent,
               };
+              watchedState.feeds = [...watchedState.feeds, feed];
 
               data.querySelectorAll('item').forEach((item) => {
                 const post = {
@@ -100,8 +100,6 @@ export default () => {
                 };
                 state.posts = [...state.posts, post];
               });
-
-              watchedState.feeds = [...watchedState.feeds, feed];
 
               watchedState.processState = 'completed';
               form.reset();
@@ -146,4 +144,38 @@ export default () => {
         watchedState.processState = 'error';
       });
   });
+  const fn = () => {
+    state.feeds.forEach((feed) => {
+      axios(getUrlWithProxy(feed.feedUrl))
+        .then((response) => {
+          const [data] = parserRss(response.data.contents);
+          const oldDate = feed.feedPubDate;
+          const newDate = new Date(data.querySelector('pubDate').textContent);
+
+          if (newDate.getTime() > oldDate.getTime()) {
+            data.querySelectorAll('item').forEach((item) => {
+              const dateItem = new Date(item.querySelector('pubDate').textContent);
+              console.log(dateItem);
+              if (dateItem.getTime() > oldDate.getTime()) {
+                const post = {
+                  postId: uniqueId(),
+                  url: item.querySelector('link').textContent,
+                  title: item.querySelector('title').textContent,
+                  description: item.querySelector('description').textContent,
+                };
+                state.posts = [post, ...state.posts];
+                render(state, i18n);
+              }
+            });
+            feed.feedPubDate = newDate;
+          }
+        })
+        .catch(() => {
+          watchedState.addRssForm.message = i18n.t(resources[state.appLng].errors.networkErr);
+          watchedState.processState = 'error';
+        });
+    });
+    setTimeout(fn, 5000);
+  };
+  fn();
 };
