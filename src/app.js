@@ -1,43 +1,81 @@
 import axios from 'axios';
 import { object, string, setLocale } from 'yup';
-import onChange from 'on-change';
 import i18next from 'i18next';
 import uniqueId from 'lodash/uniqueId.js';
 import resources from './locales/index.js';
-import render from './view.js';
-import { getUrlWithProxy, parserRss } from './utilites.js';
+import watch from './view.js';
 
-const validator = (urlValue, state, i18n) => {
-  const urlList = state.feeds.reduce((acc, feed) => {
-    const { feedUrl } = feed;
-    return [...acc, feedUrl];
-  }, []);
-
+const validator = (value, state, i18n) => {
+  const listUrlFeed = state.feeds.map((feed) => feed.url);
   setLocale({
     string: {
-      url: i18n.t('errors.urlIncorrect'),
+      url: i18n.t('errors.notValid'),
     },
     mixed: {
-      notOneOf: i18n.t('errors.urlIsAlredy'),
+      notOneOf: i18n.t('errors.repeatRss'),
     },
   });
-  const schema = object({
-    url: string().trim().url().notOneOf(urlList),
+  const schema = object().shape({
+    url: string().trim().url().notOneOf(listUrlFeed),
   });
-  return schema.validate({ url: urlValue });
+  return schema.validate(value, { abortEarly: false });
+};
+
+const getUrlWithProxy = (url) => {
+  const proxy = 'https://allorigins.hexlet.app/';
+  return `${proxy}get?disableCache=true&url=${url}`;
+};
+
+const parserRss = (data) => {
+  const parser = new DOMParser();
+  const parseData = parser.parseFromString(data, 'application/xml');
+  const isError = parseData.querySelector('parsererror') !== null;
+  return [parseData, isError];
+};
+
+const createPost = (data, feedId) => ({
+  feedId,
+  id: uniqueId(),
+  link: data.querySelector('link').textContent,
+  title: data.querySelector('title').textContent,
+  description: data.querySelector('description').textContent,
+});
+
+const updatePosts = (state, i18n) => {
+  const watchedState = state;
+  watchedState.processState = 'wait';
+  console.log(watchedState.processState);
+  const { feeds } = watchedState;
+
+  feeds.forEach((feed) => {
+    const { id, url } = feed;
+    axios(getUrlWithProxy(url))
+      .then((response) => {
+        const [data] = parserRss(response.data.contents);
+        const posts = data.querySelectorAll('item');
+        const postList = watchedState.posts.map((post) => post.title);
+        posts.forEach((post) => {
+          const title = post.querySelector('title').textContent;
+          if (!postList.includes(title)) {
+            const newPost = createPost(post, id);
+            watchedState.posts = [newPost, ...watchedState.posts];
+          }
+        });
+      })
+      .catch(() => {
+        watchedState.addRssForm.message = i18n.t('errors.networkErr');
+        watchedState.processState = 'error';
+      });
+  });
+  watchedState.processState = 'success';
+  console.log(watchedState.processState);
+  setTimeout(() => updatePosts(watchedState, i18n), 5000);
 };
 
 export default () => {
-  const i18n = i18next.createInstance();
-  i18n.init({
-    lng: 'ru',
-    debug: false,
-    resources,
-  });
-
   const state = {
-    appLng: 'ru',
-    processState: 'init',
+    defaultLng: 'ru',
+    processState: 'wait',
     addRssForm: {
       message: '',
     },
@@ -46,136 +84,66 @@ export default () => {
     postBtnActive: '',
   };
 
-  const watchedState = onChange(state, () => {
-    if (state.processState !== 'processing') {
-      render(state, i18n);
-    }
+  const i18n = i18next.createInstance();
+  i18n.init({
+    lng: state.defaultLng,
+    debug: false,
+    resources,
   });
 
-  const form = document.querySelector('.rss-form');
-  const btn = document.querySelector('.rss-form .btn');
+  const elements = {
+    form: document.querySelector('.rss-form'),
+    sendBtn: document.querySelector('.rss-form .btn'),
+    postContainer: document.querySelector('.posts'),
+    feedContainer: document.querySelector('.feeds'),
+  };
 
-  form.addEventListener('submit', (e) => {
+  const watchedState = watch(state, elements, i18n);
+  console.log(watchedState);
+
+  elements.form.addEventListener('submit', (e) => {
     e.preventDefault();
     watchedState.processState = 'processing';
 
     const formData = new FormData(e.target);
     const urlValue = formData.get('url');
 
-    btn.setAttribute('disabled', '');
-
-    validator(urlValue, state, i18n)
-      .then((result) => {
-        state.addRssForm.message = '';
-        state.addRssForm.isValid = true;
-
-        return result.url;
-      })
-      .then((url) => {
+    validator({ url: urlValue }, watchedState, i18n)
+      .then(({ url }) => {
         axios(getUrlWithProxy(url))
           .then((response) => {
-            btn.removeAttribute('disabled');
-
             const [data, error] = parserRss(response.data.contents);
             if (error) {
-              state.addRssForm.message = i18n.t('errors.urlNotRss');
+              watchedState.addRssForm.message = i18n.t('errors.notRss');
               watchedState.processState = 'error';
             } else {
-              watchedState.addRssForm.message = i18n.t('rssAdded');
-
+              const feedId = uniqueId();
               const feed = {
-                feedUrl: url,
-                feedPubDate: new Date(data.querySelector('pubDate').textContent),
-                feedTitle: data.querySelector('title').textContent,
-                feedDescription: data.querySelector('description').textContent,
+                id: feedId,
+                url,
+                pubDate: new Date(data.querySelector('pubDate').textContent),
+                title: data.querySelector('title').textContent,
+                description: data.querySelector('description').textContent,
               };
               watchedState.feeds = [...watchedState.feeds, feed];
-
-              data.querySelectorAll('item').forEach((item) => {
-                const post = {
-                  postId: uniqueId(),
-                  url: item.querySelector('link').textContent,
-                  title: item.querySelector('title').textContent,
-                  description: item.querySelector('description').textContent,
-                };
-                state.posts = [...state.posts, post];
+              const posts = data.querySelectorAll('item');
+              posts.forEach((post) => {
+                const newPost = createPost(post, feedId);
+                watchedState.posts = [...watchedState.posts, newPost];
               });
-
-              watchedState.processState = 'completed';
-              form.reset();
-              const btnsOpen = document.querySelectorAll('.list-group .btn');
-              btnsOpen.forEach((btnn) => btnn.addEventListener('click', (ee) => {
-                const res = ee.target;
-                const btnId = res.getAttribute('data-id');
-                console.log(btnId);
-                state.postBtnActive = btnId;
-                watchedState.processState = 'modalOpen';
-              }));
-
-              const btnCloseX = document.querySelector('.modal .btn-close');
-              btnCloseX.addEventListener('click', () => {
-                watchedState.processState = 'modalClose';
-              });
-
-              const btnClose = document.querySelector('.modal-footer .btn-secondary');
-              btnClose.addEventListener('click', () => {
-                watchedState.processState = 'modalClose';
-              });
-
-              const postLink = document.querySelectorAll('.list-group-item a');
-              postLink.forEach((a) => a.addEventListener('click', (eee) => {
-                const link = eee.target;
-                link.classList.remove('fw-bold');
-                link.classList.add('fw-normal', 'link-secondary');
-                console.log(link);
-              }));
+              watchedState.addRssForm.message = i18n.t('rssAdded');
+              watchedState.processState = 'success';
+              updatePosts(watchedState, i18n);
             }
           })
           .catch(() => {
-            btn.removeAttribute('disabled');
-            watchedState.addRssForm.message = i18n.t(resources[state.appLng].errors.networkErr);
+            watchedState.addRssForm.message = i18n.t('errors.networkErr');
             watchedState.processState = 'error';
           });
       })
       .catch((err) => {
-        btn.removeAttribute('disabled');
-
         watchedState.addRssForm.message = err.errors;
         watchedState.processState = 'error';
       });
   });
-  const fn = () => {
-    state.feeds.forEach((feed) => {
-      axios(getUrlWithProxy(feed.feedUrl))
-        .then((response) => {
-          const [data] = parserRss(response.data.contents);
-          const oldDate = feed.feedPubDate;
-          const newDate = new Date(data.querySelector('pubDate').textContent);
-
-          if (newDate.getTime() > oldDate.getTime()) {
-            data.querySelectorAll('item').forEach((item) => {
-              const dateItem = new Date(item.querySelector('pubDate').textContent);
-              console.log(dateItem);
-              if (dateItem.getTime() > oldDate.getTime()) {
-                const post = {
-                  postId: uniqueId(),
-                  url: item.querySelector('link').textContent,
-                  title: item.querySelector('title').textContent,
-                  description: item.querySelector('description').textContent,
-                };
-                state.posts = [post, ...state.posts];
-                render(state, i18n);
-              }
-            });
-            feed.feedPubDate = newDate;
-          }
-        })
-        .catch(() => {
-          watchedState.addRssForm.message = i18n.t(resources[state.appLng].errors.networkErr);
-          watchedState.processState = 'error';
-        });
-    });
-    setTimeout(fn, 5000);
-  };
-  fn();
 };
