@@ -6,7 +6,7 @@ import resources from './locales/index.js';
 import watch from './view.js';
 
 const validator = (value, state, i18n) => {
-  const listUrlFeed = state.feeds.map((feed) => feed.url);
+  const feeds = state.feeds.map((feed) => feed.url);
   setLocale({
     string: {
       url: i18n.t('errors.notValid'),
@@ -16,7 +16,7 @@ const validator = (value, state, i18n) => {
     },
   });
   const schema = object().shape({
-    url: string().trim().url().notOneOf(listUrlFeed),
+    url: string().trim().url().notOneOf(feeds),
   });
   return schema.validate(value, { abortEarly: false });
 };
@@ -34,6 +34,7 @@ const parserRss = (data) => {
 };
 
 const createPost = (data, feedId) => ({
+  visited: false,
   feedId,
   id: uniqueId(),
   link: data.querySelector('link').textContent,
@@ -44,7 +45,6 @@ const createPost = (data, feedId) => ({
 const updatePosts = (state, i18n) => {
   const watchedState = state;
   watchedState.processState = 'wait';
-  console.log(watchedState.processState);
   const { feeds } = watchedState;
 
   feeds.forEach((feed) => {
@@ -53,22 +53,21 @@ const updatePosts = (state, i18n) => {
       .then((response) => {
         const [data] = parserRss(response.data.contents);
         const posts = data.querySelectorAll('item');
-        const postList = watchedState.posts.map((post) => post.title);
+        const postsTitle = watchedState.posts.map((post) => post.title);
         posts.forEach((post) => {
           const title = post.querySelector('title').textContent;
-          if (!postList.includes(title)) {
+          if (!postsTitle.includes(title)) {
             const newPost = createPost(post, id);
             watchedState.posts = [newPost, ...watchedState.posts];
           }
         });
       })
       .catch(() => {
-        watchedState.addRssForm.message = i18n.t('errors.networkErr');
+        watchedState.feedbackMessage = i18n.t('errors.networkErr');
         watchedState.processState = 'error';
       });
   });
-  watchedState.processState = 'success';
-  console.log(watchedState.processState);
+  watchedState.processState = 'update';
   setTimeout(() => updatePosts(watchedState, i18n), 5000);
 };
 
@@ -76,11 +75,13 @@ export default () => {
   const state = {
     defaultLng: 'ru',
     processState: 'wait',
-    addRssForm: {
-      message: '',
-    },
+    feedbackMessage: '',
     feeds: [],
     posts: [],
+    preview: {
+      state: 'previewClose',
+      postID: '',
+    },
     postBtnActive: '',
   };
 
@@ -92,14 +93,23 @@ export default () => {
   });
 
   const elements = {
+    body: document.querySelector('body'),
     form: document.querySelector('.rss-form'),
+    input: document.getElementById('url-input'),
     sendBtn: document.querySelector('.rss-form .btn'),
-    postContainer: document.querySelector('.posts'),
-    feedContainer: document.querySelector('.feeds'),
+    feedbackContainer: document.querySelector('.feedback'),
+    postsContainer: document.querySelector('.posts'),
+    feedsContainer: document.querySelector('.feeds'),
+    preview: {
+      modal: document.querySelector('.modal'),
+      title: document.querySelector('.modal .modal-title'),
+      description: document.querySelector('.modal .modal-body'),
+      readMore: document.querySelector('.modal .modal-footer .full-article'),
+      btnClose: document.querySelectorAll('.modal button'),
+    },
   };
 
   const watchedState = watch(state, elements, i18n);
-  console.log(watchedState);
 
   elements.form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -110,11 +120,11 @@ export default () => {
 
     validator({ url: urlValue }, watchedState, i18n)
       .then(({ url }) => {
-        axios(getUrlWithProxy(url))
+        axios.get(getUrlWithProxy(url))
           .then((response) => {
             const [data, error] = parserRss(response.data.contents);
             if (error) {
-              watchedState.addRssForm.message = i18n.t('errors.notRss');
+              watchedState.feedbackMessage = i18n.t('errors.notRss');
               watchedState.processState = 'error';
             } else {
               const feedId = uniqueId();
@@ -131,18 +141,19 @@ export default () => {
                 const newPost = createPost(post, feedId);
                 watchedState.posts = [...watchedState.posts, newPost];
               });
-              watchedState.addRssForm.message = i18n.t('rssAdded');
+              watchedState.feedbackMessage = i18n.t('rssAdded');
               watchedState.processState = 'success';
               updatePosts(watchedState, i18n);
+              elements.form.reset();
             }
           })
           .catch(() => {
-            watchedState.addRssForm.message = i18n.t('errors.networkErr');
+            watchedState.feedbackMessage = i18n.t('errors.networkErr');
             watchedState.processState = 'error';
           });
       })
       .catch((err) => {
-        watchedState.addRssForm.message = err.errors;
+        watchedState.feedbackMessage = err.errors;
         watchedState.processState = 'error';
       });
   });

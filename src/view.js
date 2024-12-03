@@ -1,50 +1,100 @@
 import onChange from 'on-change';
 
 export default (state, elements, i18n) => {
-  const renderError = () => {
-    elements.sendBtn.removeAttribute('disabled');
-    const feedbackContainer = document.querySelector('.feedback');
-    const formInput = document.getElementById('url-input');
-    feedbackContainer.classList.remove('text-success');
-    feedbackContainer.classList.add('text-danger');
-    feedbackContainer.textContent = state.addRssForm.message;
-    formInput.classList.add('is-invalid');
-    formInput.focus();
+  const {
+    body, input, sendBtn, feedbackContainer, postsContainer, feedsContainer, preview,
+  } = elements;
+
+  const generatePostControll = () => {
+    const openPreview = document.querySelectorAll('.list-group .btn');
+
+    openPreview.forEach((btn) => btn.addEventListener('click', (e) => {
+      const id = e.target.getAttribute('data-id');
+      watchedState.preview.postID = id;
+      watchedState.preview.state = 'previewOpen';
+    }));
+
+    preview.btnClose.forEach((btn) => btn.addEventListener('click', () => {
+      watchedState.preview.state = 'previewClose';
+    }));
+
+    preview.modal.addEventListener('click', () => {
+      watchedState.preview.state = 'previewClose';
+    });
+
+    const postLinks = document.querySelectorAll('.list-group-item a');
+    postLinks.forEach((link) => link.addEventListener('click', (e) => {
+      const id = e.target.getAttribute('data-id');
+      watchedState.posts.forEach((post) => {
+        if (post.id === id) {
+          post.visited = true;
+        }
+        link.classList.remove('fw-bold');
+        link.classList.add('fw-normal', 'link-secondary');
+      });
+    }));
   };
 
-  const renderApp = () => {
-    console.log('RENDER APP');
-    elements.sendBtn.removeAttribute('disabled');
-    elements.form.reset();
-    const feedbackContainer = document.querySelector('.feedback');
-    const formInput = document.getElementById('url-input');
-    feedbackContainer.classList.remove('text-danger');
-    feedbackContainer.classList.add('text-success');
-    feedbackContainer.textContent = state.addRssForm.message;
-    formInput.classList.remove('is-invalid');
-    formInput.focus();
+  const handleFormState = (value) => {
+    if (value === 'processing') {
+      sendBtn.setAttribute('disabled', true);
+      input.setAttribute('readonly', true);
+    }
+    sendBtn.removeAttribute('disabled');
+    input.removeAttribute('readonly');
+    input.focus();
+    if (value === 'success') {
+      input.classList.remove('is-invalid');
+      feedbackContainer.classList.remove('text-danger');
+      feedbackContainer.classList.add('text-success');
+    } else if (value === 'error') {
+      input.classList.add('is-invalid');
+      feedbackContainer.classList.remove('text-success');
+      feedbackContainer.classList.add('text-danger');
+    }
+    feedbackContainer.textContent = state.feedbackMessage;
+  };
 
-    const postContainer = document.querySelector('.posts');
-    postContainer.innerHTML = `<div class='card border-0'>
-    <div class='card-body'>
-    <h2 class='card-title h4'>${i18n.t('posts')}</h2>
-    </div>
-    </div>`;
-    const postsCard = document.querySelector('.posts .card');
-    const postsList = document.createElement('ul');
-    postsList.classList.add('list-group', 'border-0', 'rounded-0');
-    postsCard.append(postsList);
+  const handleModalState = (value) => {
+    if (value === 'previewOpen') {
+      body.classList.add('modal-open');
+      body.setAttribute('style', 'overflow: hidden; padding-right: 15px;');
+      preview.modal.classList.add('show');
+      preview.modal.setAttribute('style', 'display: block;', 'aria-modal = true', 'role = dialog;');
+      preview.modal.setAttribute('aria-modal', true);
+      preview.modal.setAttribute('role', 'dialog');
+      preview.modal.removeAttribute('aria-hidden');
+      const modalShadow = document.createElement('div');
+      modalShadow.classList.add('modal-backdrop', 'fade', 'show');
+      body.append(modalShadow);
+    } else {
+      body.classList.remove('modal-open');
+      body.removeAttribute('style');
+      preview.modal.classList.remove('show');
+      preview.modal.setAttribute('style', 'display: none', 'aria-hidden = true;');
+      preview.modal.removeAttribute('aria-modal', 'role');
+      const modalShadow = document.querySelector('.modal-backdrop');
+      modalShadow.remove();
+    }
+  };
 
-    const feedsContainer = document.querySelector('.feeds');
-    feedsContainer.innerHTML = `<div class='card border-0'>
-    <div class='card-body'>
-    <h2 class='card-title h4'>${i18n.t('feeds')}</h2>
-    </div>
-    </div>`;
-    const feedsCard = document.querySelector('.feeds .card');
+  const renderFeeds = () => {
+    const divCard = document.createElement('div');
+    divCard.classList.add('card', 'border-0');
+
+    const divCardBody = document.createElement('div');
+    divCardBody.classList.add('card-body');
+
+    const h2Cadr = document.createElement('h2');
+    h2Cadr.classList.add('card-title', 'h4');
+    h2Cadr.innerHTML = i18n.t('feeds');
+
+    divCardBody.append(h2Cadr);
+
+    divCard.append(divCardBody);
+
     const feedList = document.createElement('ul');
     feedList.classList.add('list-group-item', 'border-0', 'rounded-0');
-    feedsCard.append(feedList);
 
     state.feeds.forEach((feed) => {
       const feedItem = document.createElement('li');
@@ -53,104 +103,93 @@ export default (state, elements, i18n) => {
       <p class='m-0 small text-black-50'>${feed.description}</p>`;
       feedList.append(feedItem);
     });
+    divCard.append(feedList);
+    feedsContainer.append(divCard);
+  };
 
-    const listGroup = document.querySelector('.list-group');
-    listGroup.innerHTML = '';
+  const renderPosts = () => {
+    postsContainer.innerHTML = '';
+    const divCard = document.createElement('div');
+    divCard.classList.add('card', 'border-0');
+
+    const divCardBody = document.createElement('div');
+    divCardBody.classList.add('card-body');
+
+    const h2Cadr = document.createElement('h2');
+    h2Cadr.classList.add('card-title', 'h4');
+    h2Cadr.innerHTML = i18n.t('posts');
+    divCardBody.append(h2Cadr);
+    divCard.append(divCardBody);
+
+    const postsList = document.createElement('ul');
+    postsList.classList.add('list-group', 'border-0', 'rounded-0');
+
     state.posts.forEach((post) => {
       const postItem = document.createElement('li');
       postItem.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
-      postItem.innerHTML = `<a href='${post.link}' class='fw-bold' data-id='${post.id}' target='_blank' data-id='noopener noreferrer'>${post.title}</a>
-      <button type='button' class='btn btn-outline-primary btn-sm' data-id='${post.id}' data-bs-toggle='#modal'>${i18n.t('viewPost')}</button>`;
-      listGroup.append(postItem);
+
+      const viewPostBtn = document.createElement('button');
+      viewPostBtn.classList.add('btn', 'btn-outline-primary', 'btn-sm');
+      viewPostBtn.setAttribute('type', 'button');
+      viewPostBtn.setAttribute('data-id', post.id);
+      viewPostBtn.setAttribute('data-bs-toggle', '#modal');
+      viewPostBtn.innerHTML = i18n.t('viewPost');
+      postItem.prepend(viewPostBtn);
+
+      const link = document.createElement('a');
+      link.setAttribute('href', post.link);
+      link.setAttribute('data-id', post.id);
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener noreferrer');
+      if (post.visited) {
+        link.classList.remove('fw-bold');
+        link.classList.add('fw-normal', 'link-secondary');
+      } else {
+        link.classList.remove('fw-normal', 'link-secondary');
+        link.classList.add('fw-bold');
+      }
+      link.innerHTML = post.title;
+      postItem.prepend(link);
+
+      postsList.append(postItem);
     });
-    // -------------------------------------------------------------------------------
-    const btnsOpen = document.querySelectorAll('.list-group .btn');
 
-    btnsOpen.forEach((btnn) => btnn.addEventListener('click', (ee) => {
-      const res = ee.target;
-      const btnId = res.getAttribute('data-id');
-      state.postBtnActive = btnId;
-      watchedState.processState = 'modalOpen';
-    }));
-
-    const btnCloseX = document.querySelector('.modal .btn-close');
-    btnCloseX.addEventListener('click', () => {
-      watchedState.processState = 'modalClose';
-    });
-
-    const btnClose = document.querySelector('.modal-footer .btn-secondary');
-    btnClose.addEventListener('click', () => {
-      watchedState.processState = 'modalClose';
-    });
-
-    const postLink = document.querySelectorAll('.list-group-item a');
-    postLink.forEach((a) => a.addEventListener('click', (eee) => {
-      const link = eee.target;
-      link.classList.remove('fw-bold');
-      link.classList.add('fw-normal', 'link-secondary');
-    }));
-  // --------------------------------------------------------------
+    divCard.append(postsList);
+    postsContainer.append(divCard);
+    generatePostControll();
   };
 
-  const modalOpen = () => {
-    const modalTitle = document.querySelector('.modal .modal-title');
-    const modalDescription = document.querySelector('.modal .modal-body');
-    const reedMoreUrl = document.querySelector('.modal .modal-footer .full-article');
-
-    const id = state.postBtnActive;
+  const renderPreview = () => {
+    const id = state.preview.postID;
     const [post] = state.posts.filter((p) => p.id === id);
 
-    modalTitle.innerHTML = post.title;
-    modalDescription.innerHTML = post.description;
-    reedMoreUrl.setAttribute('href', post.link);
-
-    const body = document.querySelector('body');
-    const modal = document.querySelector('.modal');
-    body.classList.add('modal-open');
-    body.setAttribute('style', 'overflow: hidden; padding-right: 15px;');
-    modal.classList.add('show');
-    modal.setAttribute('style', 'display: block;');
-    modal.removeAttribute('aria-hidden');
-    modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('role', 'dialog');
-  };
-
-  const modalClose = () => {
-    const body = document.querySelector('body');
-    const modal = document.querySelector('.modal');
-
-    body.classList.remove('modal-open');
-    body.setAttribute('style', '');
-
-    modal.classList.remove('show');
-
-    modal.setAttribute('style', 'display: none;');
-    modal.setAttribute('aria-hidden', 'true');
-    modal.removeAttribute('aria-modal');
-    modal.removeAttribute('role');
+    preview.title.innerHTML = post.title;
+    preview.description.innerHTML = post.description;
+    preview.readMore.setAttribute('href', post.link);
   };
 
   const watchedState = onChange(state, (path, value) => {
-    // const { processState } = state;
-
     switch (value) {
       case 'processing':
-        elements.sendBtn.setAttribute('disabled', true);
+        handleFormState(value);
         break;
       case 'success':
-        renderApp(state, elements, i18n);
+        handleFormState(value);
+        renderFeeds();
+        renderPosts();
         break;
       case 'error':
-        renderError(state, elements);
+        handleFormState(value);
         break;
-      case 'modalOpen':
-        modalOpen(state, i18n);
+      case 'previewOpen':
+        handleModalState(value);
+        renderPreview();
         break;
-      case 'modalClose':
-        modalClose();
+      case 'previewClose':
+        handleModalState(value);
         break;
       case 'update':
-        renderApp(state, elements, i18n);
+        renderPosts();
         break;
       default:
         break;
