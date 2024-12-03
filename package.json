@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "type": "module",
   "description": "RSS aggregator",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "build": "webpack --config webpack.config.js",
     "serve": "webpack serve --open --mode development"
   },
-  "author": "",
+  "author": "Gomer VV",
   "license": "ISC",
   "devDependencies": {
     "@popperjs/core": "^2.11.8",
