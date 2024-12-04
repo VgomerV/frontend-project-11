@@ -82,7 +82,6 @@ export default () => {
       state: 'previewClose',
       postID: '',
     },
-    postBtnActive: '',
   };
 
   const i18n = i18next.createInstance();
