@@ -41,18 +41,25 @@ export default (state, elements, i18n) => {
       input.setAttribute('readonly', true);
       return;
     }
+  
     sendBtn.removeAttribute('disabled');
     input.removeAttribute('readonly');
     input.focus();
-    if (value === 'success') {
+  
+    if (state.isFormValid) {
       input.classList.remove('is-invalid');
+    } else {
+      input.classList.add('is-invalid');
+    }
+  
+    if (value === 'success') {
       feedbackContainer.classList.remove('text-danger');
       feedbackContainer.classList.add('text-success');
     } else if (value === 'error') {
-      input.classList.add('is-invalid');
       feedbackContainer.classList.remove('text-success');
       feedbackContainer.classList.add('text-danger');
     }
+  
     feedbackContainer.textContent = state.feedbackMessage;
   };
 
