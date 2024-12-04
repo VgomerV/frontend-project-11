@@ -75,6 +75,7 @@ export default () => {
   const state = {
     defaultLng: 'ru',
     processState: 'wait',
+    isFormValid: null,
     feedbackMessage: '',
     feeds: [],
     posts: [],
@@ -119,6 +120,7 @@ export default () => {
 
     validator({ url: urlValue }, watchedState, i18n)
       .then(({ url }) => {
+        watchedState.isFormValid = true;
         axios.get(getUrlWithProxy(url))
           .then((response) => {
             const [data, error] = parserRss(response.data.contents);
@@ -152,6 +154,7 @@ export default () => {
           });
       })
       .catch((err) => {
+        watchedState.isFormValid = false;
         watchedState.feedbackMessage = err.errors;
         watchedState.processState = 'error';
       });
