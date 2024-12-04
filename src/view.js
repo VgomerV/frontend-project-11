@@ -39,6 +39,7 @@ export default (state, elements, i18n) => {
     if (value === 'processing') {
       sendBtn.setAttribute('disabled', true);
       input.setAttribute('readonly', true);
+      return;
     }
     sendBtn.removeAttribute('disabled');
     input.removeAttribute('readonly');
