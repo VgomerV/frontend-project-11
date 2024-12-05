@@ -83,6 +83,7 @@ export default () => {
       state: 'previewClose',
       postID: '',
     },
+    test: '',
   };
 
   const i18n = i18next.createInstance();
@@ -110,6 +111,14 @@ export default () => {
   };
 
   const watchedState = watch(state, elements, i18n);
+
+  elements.postsContainer.addEventListener('click', (e) => {
+    if (e.target.target === '_blank') {
+      const { id } = e.target.dataset;
+      const postLink = watchedState.posts.find((post) => post.id === id);
+      postLink.visited = 'visited';
+    }
+  });
 
   elements.form.addEventListener('submit', (e) => {
     e.preventDefault();

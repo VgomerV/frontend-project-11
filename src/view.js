@@ -21,18 +21,6 @@ export default (state, elements, i18n) => {
     preview.modal.addEventListener('click', () => {
       watchedState.preview.state = 'previewClose';
     });
-
-    const postLinks = document.querySelectorAll('.list-group-item a');
-    postLinks.forEach((link) => link.addEventListener('click', (e) => {
-      const id = e.target.getAttribute('data-id');
-      watchedState.posts.forEach((post) => {
-        if (post.id === id) {
-          post.visited = true;
-        }
-        link.classList.remove('fw-bold');
-        link.classList.add('fw-normal', 'link-secondary');
-      });
-    }));
   };
 
   const handleFormState = (value) => {
@@ -41,17 +29,17 @@ export default (state, elements, i18n) => {
       input.setAttribute('readonly', true);
       return;
     }
-  
+
     sendBtn.removeAttribute('disabled');
     input.removeAttribute('readonly');
     input.focus();
-  
+
     if (state.isFormValid) {
       input.classList.remove('is-invalid');
     } else {
       input.classList.add('is-invalid');
     }
-  
+
     if (value === 'success') {
       feedbackContainer.classList.remove('text-danger');
       feedbackContainer.classList.add('text-success');
@@ -59,7 +47,7 @@ export default (state, elements, i18n) => {
       feedbackContainer.classList.remove('text-success');
       feedbackContainer.classList.add('text-danger');
     }
-  
+
     feedbackContainer.textContent = state.feedbackMessage;
   };
 
@@ -177,6 +165,7 @@ export default (state, elements, i18n) => {
   };
 
   const watchedState = onChange(state, (path, value) => {
+    console.log(path.split('.')[0]);
     switch (value) {
       case 'processing':
         handleFormState(value);
@@ -199,10 +188,12 @@ export default (state, elements, i18n) => {
       case 'update':
         renderPosts();
         break;
+      // case 'visited':
+      //   renderPosts();
+      //   break;
       default:
         break;
     }
   });
-
   return watchedState;
 };
