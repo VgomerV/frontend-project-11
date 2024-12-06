@@ -52,8 +52,7 @@ const updatePosts = (state, i18n) => {
         const [data] = parserRss(response.data.contents);
         const posts = data.querySelectorAll('item');
 
-        const postsTitle = watchedState.posts
-          .filter((post) => post.feedId = id)
+        const postsTitle = watchedState.posts.filter((post) => post.feedId === id)
           .map((post) => post.title);
 
         posts.forEach((post) => {
@@ -115,7 +114,7 @@ export default () => {
   const watchedState = watch(state, elements, i18n);
 
   elements.postsContainer.addEventListener('click', (e) => {
-    const tagName = e.target.tagName;
+    const { tagName } = e.target;
     const id = e.target.getAttribute('data-id');
     const postLink = watchedState.posts.find((post) => post.id === id);
     switch (tagName) {
@@ -128,12 +127,12 @@ export default () => {
         postLink.visited = 'visited';
         break;
       default:
-        break;  
+        break;
     }
   });
 
   elements.preview.modal.addEventListener('click', (e) => {
-    const tagName = e.target.tagName;
+    const { tagName } = e.target;
     if (tagName !== 'A') {
       watchedState.preview.state = 'close';
     }
@@ -187,7 +186,7 @@ export default () => {
             watchedState.feedbackMessage = i18n.t('errors.networkErr');
           });
       })
-      .catch((err) => {
+      .catch(() => {
         watchedState.form.isValid = false;
         watchedState.form.processState = 'error';
         watchedState.feedbackMessage = i18n.t('errors.repeatRss');
