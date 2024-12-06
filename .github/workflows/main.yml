@@ -35,7 +35,6 @@ jobs:
           cache: 'npm'
       - run: make install
       - run: make lint
-      - run: make test
       - name: Test & publish code coverage
         # Publish code coverage on Code Climate
         # https://github.com/paambaati/codeclimate-action
