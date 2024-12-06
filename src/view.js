@@ -23,7 +23,7 @@ export default (state, elements, i18n) => {
     if (state.form.isValid) {
       input.classList.remove('is-invalid');
     } else {
-      input.classList.add('is-invalid')
+      input.classList.add('is-invalid');
     }
   };
 
