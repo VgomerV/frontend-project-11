@@ -189,7 +189,7 @@ export default () => {
       .catch(() => {
         watchedState.form.isValid = false;
         watchedState.form.processState = 'error';
-        watchedState.feedbackMessage = i18n.t('errors.repeatRss');
+        watchedState.feedbackMessage = i18n.t('errors.notRss');
       });
   });
 };
