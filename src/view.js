@@ -2,26 +2,8 @@ import onChange from 'on-change';
 
 export default (state, elements, i18n) => {
   const {
-    body, input, sendBtn, feedbackContainer, postsContainer, feedsContainer, preview,
+    body, form, input, sendBtn, feedbackContainer, postsContainer, feedsContainer, preview,
   } = elements;
-
-  const generatePostControll = () => {
-    const openPreview = document.querySelectorAll('.list-group .btn');
-
-    openPreview.forEach((btn) => btn.addEventListener('click', (e) => {
-      const id = e.target.getAttribute('data-id');
-      watchedState.preview.postID = id;
-      watchedState.preview.state = 'previewOpen';
-    }));
-
-    preview.btnClose.forEach((btn) => btn.addEventListener('click', () => {
-      watchedState.preview.state = 'previewClose';
-    }));
-
-    preview.modal.addEventListener('click', () => {
-      watchedState.preview.state = 'previewClose';
-    });
-  };
 
   const handleFormState = (value) => {
     if (value === 'processing') {
@@ -32,49 +14,29 @@ export default (state, elements, i18n) => {
 
     sendBtn.removeAttribute('disabled');
     input.removeAttribute('readonly');
-    input.focus();
-
-    if (state.isFormValid) {
-      input.classList.remove('is-invalid');
-    } else {
-      input.classList.add('is-invalid');
-    }
 
     if (value === 'success') {
+      form.reset();
+      input.focus();
+    }
+
+    state.form.isValid ? input.classList.remove('is-invalid') : input.classList.add('is-invalid');
+  };
+
+  const renderFeedback = () => {
+    if (state.form.processState === 'error') {
+      feedbackContainer.classList.remove('text-success'); 
+      feedbackContainer.classList.add('text-danger');   
+    } else {
       feedbackContainer.classList.remove('text-danger');
       feedbackContainer.classList.add('text-success');
-    } else if (value === 'error') {
-      feedbackContainer.classList.remove('text-success');
-      feedbackContainer.classList.add('text-danger');
     }
 
     feedbackContainer.textContent = state.feedbackMessage;
   };
 
-  const handleModalState = (value) => {
-    if (value === 'previewOpen') {
-      body.classList.add('modal-open');
-      body.setAttribute('style', 'overflow: hidden; padding-right: 15px;');
-      preview.modal.classList.add('show');
-      preview.modal.setAttribute('style', 'display: block;', 'aria-modal = true', 'role = dialog;');
-      preview.modal.setAttribute('aria-modal', true);
-      preview.modal.setAttribute('role', 'dialog');
-      preview.modal.removeAttribute('aria-hidden');
-      const modalShadow = document.createElement('div');
-      modalShadow.classList.add('modal-backdrop', 'fade', 'show');
-      body.append(modalShadow);
-    } else {
-      body.classList.remove('modal-open');
-      body.removeAttribute('style');
-      preview.modal.classList.remove('show');
-      preview.modal.setAttribute('style', 'display: none', 'aria-hidden = true;');
-      preview.modal.removeAttribute('aria-modal', 'role');
-      const modalShadow = document.querySelector('.modal-backdrop');
-      modalShadow.remove();
-    }
-  };
-
   const renderFeeds = () => {
+    feedsContainer.innerHTML = '';
     const divCard = document.createElement('div');
     divCard.classList.add('card', 'border-0');
 
@@ -147,53 +109,72 @@ export default (state, elements, i18n) => {
       link.innerHTML = post.title;
       postItem.prepend(link);
 
-      postsList.append(postItem);
+      postsList.prepend(postItem);
     });
 
     divCard.append(postsList);
     postsContainer.append(divCard);
-    generatePostControll();
   };
 
-  const renderPreview = () => {
+  const renderOpenPreview = () => {
     const id = state.preview.postID;
     const [post] = state.posts.filter((p) => p.id === id);
 
     preview.title.innerHTML = post.title;
     preview.description.innerHTML = post.description;
     preview.readMore.setAttribute('href', post.link);
-  };
+
+    body.classList.add('modal-open');
+    body.setAttribute('style', 'overflow: hidden; padding-right: 15px;');
+    preview.modal.classList.add('show');
+    preview.modal.setAttribute('style', 'display: block;', 'aria-modal = true', 'role = dialog;');
+    preview.modal.setAttribute('aria-modal', true);
+    preview.modal.setAttribute('role', 'dialog');
+    preview.modal.removeAttribute('aria-hidden');
+    const modalShadow = document.createElement('div');
+    modalShadow.classList.add('modal-backdrop', 'fade', 'show');
+    body.append(modalShadow);
+};
+
+const renderClosePreview = () => {
+    body.classList.remove('modal-open');
+    body.removeAttribute('style');
+    preview.modal.classList.remove('show');
+    preview.modal.setAttribute('style', 'display: none', 'aria-hidden = true;');
+    preview.modal.removeAttribute('aria-modal', 'role');
+    preview.modal.removeAttribute('role');
+    const modalShadow = document.querySelector('.modal-backdrop');
+    modalShadow.remove()
+};
 
   const watchedState = onChange(state, (path, value) => {
-    console.log(path.split('.')[0]);
-    switch (value) {
-      case 'processing':
+
+    const [rootPath] = path.split('.');
+
+    switch (rootPath) {
+      case 'form':
         handleFormState(value);
         break;
-      case 'success':
-        handleFormState(value);
+      case 'feedbackMessage':
+        renderFeedback(value);
+        break;
+      case 'feeds':
         renderFeeds();
+        break;
+      case 'posts':
         renderPosts();
         break;
-      case 'error':
-        handleFormState(value);
+      case 'preview':
+        if (value === 'open') {
+          renderOpenPreview();
+        } else if (value === 'close') {
+          renderClosePreview();
+        }
         break;
-      case 'previewOpen':
-        handleModalState(value);
-        renderPreview();
-        break;
-      case 'previewClose':
-        handleModalState(value);
-        break;
-      case 'update':
-        renderPosts();
-        break;
-      // case 'visited':
-      //   renderPosts();
-      //   break;
       default:
         break;
     }
   });
+
   return watchedState;
 };
