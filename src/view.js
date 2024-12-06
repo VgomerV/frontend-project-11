@@ -20,13 +20,17 @@ export default (state, elements, i18n) => {
       input.focus();
     }
 
-    state.form.isValid ? input.classList.remove('is-invalid') : input.classList.add('is-invalid');
+    if (state.form.isValid) {
+      input.classList.remove('is-invalid');
+    } else {
+      input.classList.add('is-invalid')
+    }
   };
 
   const renderFeedback = () => {
     if (state.form.processState === 'error') {
-      feedbackContainer.classList.remove('text-success'); 
-      feedbackContainer.classList.add('text-danger');   
+      feedbackContainer.classList.remove('text-success');
+      feedbackContainer.classList.add('text-danger');
     } else {
       feedbackContainer.classList.remove('text-danger');
       feedbackContainer.classList.add('text-success');
@@ -134,9 +138,9 @@ export default (state, elements, i18n) => {
     const modalShadow = document.createElement('div');
     modalShadow.classList.add('modal-backdrop', 'fade', 'show');
     body.append(modalShadow);
-};
+  };
 
-const renderClosePreview = () => {
+  const renderClosePreview = () => {
     body.classList.remove('modal-open');
     body.removeAttribute('style');
     preview.modal.classList.remove('show');
@@ -144,11 +148,10 @@ const renderClosePreview = () => {
     preview.modal.removeAttribute('aria-modal', 'role');
     preview.modal.removeAttribute('role');
     const modalShadow = document.querySelector('.modal-backdrop');
-    modalShadow.remove()
-};
+    modalShadow.remove();
+  };
 
   const watchedState = onChange(state, (path, value) => {
-
     const [rootPath] = path.split('.');
 
     switch (rootPath) {
