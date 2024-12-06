@@ -5,8 +5,7 @@ import uniqueId from 'lodash/uniqueId.js';
 import resources from './locales/index.js';
 import watch from './view.js';
 
-const validator = (value, state, i18n) => {
-  const feeds = state.feeds.map((feed) => feed.url);
+const validator = (data, feeds, i18n) => {
   setLocale({
     string: {
       url: i18n.t('errors.notValid'),
@@ -18,7 +17,7 @@ const validator = (value, state, i18n) => {
   const schema = object().shape({
     url: string().trim().url().notOneOf(feeds),
   });
-  return schema.validate(value, { abortEarly: false });
+  return schema.validate(data, { abortEarly: false });
 };
 
 const getUrlWithProxy = (url) => {
@@ -44,7 +43,6 @@ const createPost = (data, feedId) => ({
 
 const updatePosts = (state, i18n) => {
   const watchedState = state;
-  watchedState.processState = 'wait';
   const { feeds } = watchedState;
 
   feeds.forEach((feed) => {
@@ -53,37 +51,41 @@ const updatePosts = (state, i18n) => {
       .then((response) => {
         const [data] = parserRss(response.data.contents);
         const posts = data.querySelectorAll('item');
-        const postsTitle = watchedState.posts.map((post) => post.title);
+
+        const postsTitle = watchedState.posts
+          .filter((post) => post.feedId = id)
+          .map((post) => post.title);
+
         posts.forEach((post) => {
           const title = post.querySelector('title').textContent;
           if (!postsTitle.includes(title)) {
             const newPost = createPost(post, id);
-            watchedState.posts = [newPost, ...watchedState.posts];
+            watchedState.posts = [...watchedState.posts, newPost];
           }
         });
       })
       .catch(() => {
         watchedState.feedbackMessage = i18n.t('errors.networkErr');
-        watchedState.processState = 'error';
+        watchedState.form.processState = 'error';
       });
   });
-  watchedState.processState = 'update';
   setTimeout(() => updatePosts(watchedState, i18n), 5000);
 };
 
 export default () => {
   const state = {
     defaultLng: 'ru',
-    processState: 'wait',
-    isFormValid: null,
+    form: {
+      processState: 'filling',
+      isValid: true,
+    },
     feedbackMessage: '',
     feeds: [],
     posts: [],
     preview: {
-      state: 'previewClose',
-      postID: '',
+      state: 'close',
+      postID: null,
     },
-    test: '',
   };
 
   const i18n = i18next.createInstance();
@@ -113,59 +115,82 @@ export default () => {
   const watchedState = watch(state, elements, i18n);
 
   elements.postsContainer.addEventListener('click', (e) => {
-    if (e.target.target === '_blank') {
-      const { id } = e.target.dataset;
-      const postLink = watchedState.posts.find((post) => post.id === id);
-      postLink.visited = 'visited';
+    const tagName = e.target.tagName;
+    const id = e.target.getAttribute('data-id');
+    const postLink = watchedState.posts.find((post) => post.id === id);
+    switch (tagName) {
+      case 'BUTTON':
+        postLink.visited = 'visited';
+        watchedState.preview.postID = id;
+        watchedState.preview.state = 'open';
+        break;
+      case 'A':
+        postLink.visited = 'visited';
+        break;
+      default:
+        break;  
+    }
+  });
+
+  elements.preview.modal.addEventListener('click', (e) => {
+    const tagName = e.target.tagName;
+    if (tagName !== 'A') {
+      watchedState.preview.state = 'close';
     }
   });
 
   elements.form.addEventListener('submit', (e) => {
     e.preventDefault();
-    watchedState.processState = 'processing';
+    watchedState.form.processState = 'processing';
+    watchedState.feedbackMessage = '';
 
     const formData = new FormData(e.target);
     const urlValue = formData.get('url');
 
-    validator({ url: urlValue }, watchedState, i18n)
+    const listLoadedFeed = state.feeds.map((feed) => feed.url);
+
+    validator({ url: urlValue }, listLoadedFeed, i18n)
       .then(({ url }) => {
-        watchedState.isFormValid = true;
-        axios.get(getUrlWithProxy(url))
+        watchedState.form.isValid = true;
+        axios(getUrlWithProxy(url))
           .then((response) => {
             const [data, error] = parserRss(response.data.contents);
             if (error) {
+              watchedState.form.processState = 'error';
               watchedState.feedbackMessage = i18n.t('errors.notRss');
-              watchedState.processState = 'error';
             } else {
+              watchedState.form.processState = 'success';
+              watchedState.feedbackMessage = i18n.t('rssAdded');
+
               const feedId = uniqueId();
               const feed = {
                 id: feedId,
                 url,
-                pubDate: new Date(data.querySelector('pubDate').textContent),
                 title: data.querySelector('title').textContent,
                 description: data.querySelector('description').textContent,
               };
-              watchedState.feeds = [...watchedState.feeds, feed];
+              watchedState.feeds = [feed, ...watchedState.feeds];
+
               const posts = data.querySelectorAll('item');
+              const newPosts = [];
               posts.forEach((post) => {
                 const newPost = createPost(post, feedId);
-                watchedState.posts = [...watchedState.posts, newPost];
+                newPosts.push(newPost);
               });
-              watchedState.feedbackMessage = i18n.t('rssAdded');
-              watchedState.processState = 'success';
+              watchedState.posts = [...watchedState.posts, ...newPosts.reverse()];
+
               updatePosts(watchedState, i18n);
-              elements.form.reset();
             }
           })
           .catch(() => {
+            watchedState.form.processState = 'error';
             watchedState.feedbackMessage = i18n.t('errors.networkErr');
-            watchedState.processState = 'error';
           });
       })
       .catch((err) => {
-        watchedState.isFormValid = false;
-        watchedState.feedbackMessage = err.errors;
-        watchedState.processState = 'error';
+        watchedState.form.isValid = false;
+        watchedState.form.processState = 'error';
+        watchedState.feedbackMessage = i18n.t('errors.repeatRss');
       });
   });
 };
