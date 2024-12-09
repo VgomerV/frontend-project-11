@@ -5,15 +5,7 @@ import uniqueId from 'lodash/uniqueId.js';
 import resources from './locales/index.js';
 import watch from './view.js';
 
-const validator = (data, feeds, i18n) => {
-  setLocale({
-    string: {
-      url: i18n.t('errors.notValid'),
-    },
-    mixed: {
-      notOneOf: i18n.t('errors.repeatRss'),
-    },
-  });
+const validator = (data, feeds) => {
   const schema = object().shape({
     url: string().trim().url().notOneOf(feeds),
   });
@@ -92,6 +84,15 @@ export default () => {
     lng: state.defaultLng,
     debug: false,
     resources,
+  });
+
+  setLocale({
+    string: {
+      url: i18n.t('errors.notValid'),
+    },
+    mixed: {
+      notOneOf: i18n.t('errors.repeatRss'),
+    },
   });
 
   const elements = {
