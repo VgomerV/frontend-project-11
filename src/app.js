@@ -141,6 +141,7 @@ export default () => {
           .then(([{ url }, { data }]) => {
             const [feed, posts] = parser(data);
             watchedState.form.processState = 'success';
+            watchedState.form.isValid = true;
             watchedState.feedbackMessage = i18n.t('rssAdded');
             const feedId = uniqueId();
             const newFeed = { url, id: feedId, ...feed };
@@ -166,10 +167,12 @@ export default () => {
                 watchedState.feedbackMessage = error.message;
                 break;
               case 'AxiosError':
+                watchedState.form.isValid = true;
                 watchedState.form.processState = 'error';
                 watchedState.feedbackMessage = i18n.t('errors.networkErr');
                 break;
               case 'parseError':
+                watchedState.form.isValid = true;
                 watchedState.form.processState = 'error';
                 watchedState.feedbackMessage = i18n.t('errors.notRss');
                 break;
