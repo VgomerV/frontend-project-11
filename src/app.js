@@ -138,12 +138,12 @@ export default () => {
         const fetchData = axios(createUrl(urlValue));
         const promises = Promise.all([validate, fetchData]);
         promises
-          .then(([, { data }]) => {
+          .then(([{ url }, { data }]) => {
             const [feed, posts] = parser(data);
             watchedState.form.processState = 'success';
             watchedState.feedbackMessage = i18n.t('rssAdded');
             const feedId = uniqueId();
-            const newFeed = { url: urlValue, id: feedId, ...feed };
+            const newFeed = { url, id: feedId, ...feed };
             watchedState.feeds = [newFeed, ...watchedState.feeds];
 
             const newPosts = [];
