@@ -6,6 +6,12 @@ export default (state, elements, i18n) => {
   } = elements;
 
   const handleFormState = (value) => {
+    if (state.form.isValid) {
+      input.classList.remove('is-invalid');
+    } else {
+      input.classList.add('is-invalid');
+    }
+
     if (value === 'processing') {
       sendBtn.setAttribute('disabled', true);
       input.setAttribute('readonly', true);
@@ -18,12 +24,6 @@ export default (state, elements, i18n) => {
     if (value === 'success') {
       form.reset();
       input.focus();
-    }
-
-    if (state.form.isValid) {
-      input.classList.remove('is-invalid');
-    } else {
-      input.classList.add('is-invalid');
     }
   };
 

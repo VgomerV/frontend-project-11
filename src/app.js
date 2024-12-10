@@ -127,6 +127,7 @@ export default () => {
       elements.form.addEventListener('submit', (e) => {
         e.preventDefault();
         watchedState.form.processState = 'processing';
+        watchedState.form.isValid = true;
         watchedState.feedbackMessage = '';
 
         const formData = new FormData(e.target);
@@ -139,9 +140,9 @@ export default () => {
         const promises = Promise.all([validate, fetchData]);
         promises
           .then(([{ url }, { data }]) => {
+            watchedState.form.isValid = true;
             const [feed, posts] = parser(data);
             watchedState.form.processState = 'success';
-            watchedState.form.isValid = true;
             watchedState.feedbackMessage = i18n.t('rssAdded');
             const feedId = uniqueId();
             const newFeed = { url, id: feedId, ...feed };
@@ -160,20 +161,18 @@ export default () => {
           })
           .catch((error) => {
             const errorName = error.name;
+            watchedState.form.processState = 'error';
             switch (errorName) {
               case 'ValidationError':
                 watchedState.form.isValid = false;
-                watchedState.form.processState = 'error';
                 watchedState.feedbackMessage = error.message;
                 break;
               case 'AxiosError':
                 watchedState.form.isValid = true;
-                watchedState.form.processState = 'error';
                 watchedState.feedbackMessage = i18n.t('errors.networkErr');
                 break;
               case 'parseError':
                 watchedState.form.isValid = true;
-                watchedState.form.processState = 'error';
                 watchedState.feedbackMessage = i18n.t('errors.notRss');
                 break;
               default:
