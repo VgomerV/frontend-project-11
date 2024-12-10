@@ -12,18 +12,23 @@ export default (state, elements, i18n) => {
       input.classList.add('is-invalid');
     }
 
-    if (value === 'processing') {
-      sendBtn.setAttribute('disabled', true);
-      input.setAttribute('readonly', true);
-      return;
-    }
-
-    sendBtn.removeAttribute('disabled');
-    input.removeAttribute('readonly');
-
-    if (value === 'success') {
-      form.reset();
-      input.focus();
+    switch (value) {
+      case 'processing':
+        sendBtn.setAttribute('disabled', true);
+        input.setAttribute('readonly', true);
+        break;
+      case 'success':
+        sendBtn.removeAttribute('disabled');
+        input.removeAttribute('readonly');
+        form.reset();
+        input.focus();
+        break;
+      case 'error':
+        sendBtn.removeAttribute('disabled');
+        input.removeAttribute('readonly');
+        break;
+      default:
+        break;
     }
   };
 

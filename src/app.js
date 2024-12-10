@@ -126,8 +126,6 @@ export default () => {
 
       elements.form.addEventListener('submit', (e) => {
         e.preventDefault();
-        watchedState.form.processState = 'processing';
-        watchedState.form.isValid = true;
         watchedState.feedbackMessage = '';
 
         const formData = new FormData(e.target);
@@ -136,16 +134,19 @@ export default () => {
         const listLoadedFeed = state.feeds.map((feed) => feed.url);
 
         const validate = validator({ url: urlValue }, listLoadedFeed, i18n);
-        const fetchData = axios(createUrl(urlValue));
-        const promises = Promise.all([validate, fetchData]);
+        const promises = Promise.all([validate]);
         promises
-          .then(([{ url }, { data }]) => {
+          .then(([{ url }]) => {
+            watchedState.form.processState = 'processing';
             watchedState.form.isValid = true;
+            return axios(createUrl(url));
+          })
+          .then(({ data }) => {
             const [feed, posts] = parser(data);
             watchedState.form.processState = 'success';
             watchedState.feedbackMessage = i18n.t('rssAdded');
             const feedId = uniqueId();
-            const newFeed = { url, id: feedId, ...feed };
+            const newFeed = { url: urlValue, id: feedId, ...feed };
             watchedState.feeds = [newFeed, ...watchedState.feeds];
 
             const newPosts = [];
