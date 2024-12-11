@@ -54,7 +54,7 @@ const updatePosts = (state, i18n) => {
       });
   });
   Promise.all(promises)
-    .then(() => setTimeout(() => updatePosts(watchedState, i18n), timeUpdate));
+    .finally(() => setTimeout(() => updatePosts(watchedState, i18n), timeUpdate));
 };
 
 export default () => {
