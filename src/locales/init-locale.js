@@ -1,10 +1,10 @@
-export default (i18n) => {
+export default () => {
   const configLocale = {
     string: {
-      url: i18n.t('errors.notValid'),
+      url: 'errors.notValid',
     },
     mixed: {
-      notOneOf: i18n.t('errors.repeatRss'),
+      notOneOf: 'errors.repeatRss',
     },
   };
 

@@ -20,7 +20,7 @@ const createUrl = (url) => {
   fullUrl.searchParams.set('disableCache', 'true');
   fullUrl.searchParams.set('url', url);
 
-  return fullUrl.href;
+  return fullUrl;
 };
 
 const timeUpdate = 5000;
@@ -29,30 +29,27 @@ const updatePosts = (state, i18n) => {
   const watchedState = state;
   const { feeds } = watchedState;
 
-  const promises = feeds.forEach((feed) => {
-    const { id, url } = feed;
-    axios(createUrl(url))
-      .then(({ data }) => {
-        const [, posts] = parser(data);
+  const promises = feeds.map(({ id, url }) => axios.get(createUrl(url))
+    .then(({ data }) => {
+      const [, posts] = parser(data);
 
-        const postsTitle = watchedState.posts.filter((post) => post.feedId === id)
-          .map((post) => post.title);
+      const postsTitle = watchedState.posts.filter((post) => post.feedId === id)
+        .map((post) => post.title);
 
-        posts.forEach((post) => {
-          if (!postsTitle.includes(post.title)) {
-            const postId = uniqueId();
-            const newPost = {
-              visited: false, feedId: id, id: postId, ...post,
-            };
-            watchedState.posts = [...watchedState.posts, newPost];
-          }
-        });
-      })
-      .catch(() => {
-        watchedState.feedbackMessage = i18n.t('errors.networkErr');
-        watchedState.form.processState = 'error';
+      posts.forEach((post) => {
+        if (!postsTitle.includes(post.title)) {
+          const postId = uniqueId();
+          const newPost = {
+            visited: false, feedId: id, id: postId, ...post,
+          };
+          watchedState.posts = [...watchedState.posts, newPost];
+        }
       });
-  });
+    })
+    .catch(() => {
+      watchedState.feedbackMessage = i18n.t('errors.networkErr');
+      watchedState.form.processState = 'error';
+    }));
   Promise.all(promises)
     .finally(() => setTimeout(() => updatePosts(watchedState, i18n), timeUpdate));
 };
@@ -134,13 +131,13 @@ export default () => {
 
         const listLoadedFeed = state.feeds.map((feed) => feed.url);
 
-        const validate = validator({ url: urlValue }, listLoadedFeed, i18n);
+        const validate = validator({ url: urlValue }, listLoadedFeed);
         const promises = Promise.all([validate]);
         promises
           .then(([{ url }]) => {
             watchedState.form.processState = 'processing';
             watchedState.form.isValid = true;
-            return axios(createUrl(url));
+            return axios.get(createUrl(url));
           })
           .then(({ data }) => {
             const [feed, posts] = parser(data);
@@ -167,7 +164,7 @@ export default () => {
             switch (errorName) {
               case 'ValidationError':
                 watchedState.form.isValid = false;
-                watchedState.feedbackMessage = error.message;
+                watchedState.feedbackMessage = i18n.t(error.message);
                 break;
               case 'AxiosError':
                 watchedState.form.isValid = true;
