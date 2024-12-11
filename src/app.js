@@ -29,7 +29,7 @@ const updatePosts = (state, i18n) => {
   const watchedState = state;
   const { feeds } = watchedState;
 
-  feeds.forEach((feed) => {
+  const promises = feeds.forEach((feed) => {
     const { id, url } = feed;
     axios(createUrl(url))
       .then(({ data }) => {
@@ -53,7 +53,8 @@ const updatePosts = (state, i18n) => {
         watchedState.form.processState = 'error';
       });
   });
-  setTimeout(() => updatePosts(watchedState, i18n), timeUpdate);
+  Promise.all(promises)
+    .then(() => setTimeout(() => updatePosts(watchedState, i18n), timeUpdate));
 };
 
 export default () => {
