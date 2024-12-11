@@ -94,7 +94,7 @@ export default () => {
     resources,
   })
     .then(() => {
-      setLocale(initLocale(i18n));
+      setLocale(initLocale());
       const watchedState = watch(state, elements, i18n);
 
       elements.postsContainer.addEventListener('click', (e) => {
