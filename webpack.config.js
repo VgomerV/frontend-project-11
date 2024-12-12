@@ -2,7 +2,7 @@ import path from 'path';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 
 export default {
-  mode: 'production',
+  mode: 'development',
   entry: {
     filename: path.resolve(process.cwd(), 'src/index.js'),
   },
